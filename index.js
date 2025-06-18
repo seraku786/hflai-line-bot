@@ -1,24 +1,19 @@
-// 📁 index.js
+// 📁 /hflai-line-bot/index.js
+require('dotenv').config();
 const express = require('express');
-const line = require('@line/bot-sdk');
-const bodyParser = require('body-parser');
-const dotenv = require('dotenv');
+const { middleware } = require('@line/bot-sdk');
 const messageHandler = require('./handlers/messageHandler');
-
-// .envファイルがある場合は読み込む（ローカル開発用）
-dotenv.config();
-
-const config = {
-  channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
-  channelSecret: process.env.CHANNEL_SECRET,
-};
 
 const app = express();
 
-// LINE SDKのミドルウェア設定
-app.post('/webhook', line.middleware(config), bodyParser.json(), messageHandler);
+const config = {
+  channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
+  channelSecret: process.env.LINE_CHANNEL_SECRET,
+};
 
-const PORT = process.env.PORT || 3000;
+app.post('/webhook', middleware(config), express.json(), messageHandler);
+
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 HFLAI LINE Bot is running on port ${PORT}`);
 });
