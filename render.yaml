@@ -4,10 +4,8 @@ services:
     env: node
     buildCommand: npm install
     startCommand: node index.js
-    plan: free
-    branch: main
     envVars:
-      - key: CHANNEL_SECRET
-        fromEnvVar: CHANNEL_SECRET
-      - key: CHANNEL_ACCESS_TOKEN
-        fromEnvVar: CHANNEL_ACCESS_TOKEN
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        value: zMTScCFScdlDQVTSBRFkxyp/Vz3xHD27M0kpLsCSjYAHGSYcc+Tu7Rov8wsjfUPtWiRvH0wajSrcNK7EC0vM7fLmCVp2vbSaDJQDQPc7h01V5gNZvzxYje3CvNSkQ2MVSQU0IrlRV1T9Bj54CqhpoAdB04t89/1O/w1cDnyilFU=
+      - key: LINE_CHANNEL_SECRET
+        value: 0cc9352ec2d07cde60663bfd801364a6
