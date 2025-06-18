@@ -2,7 +2,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { middleware } = require('@line/bot-sdk');
-const messageHandler = require('./src/handlers/messageHandler');
+const messageHandler = require('./src/handlers/messageHandler');  // ここだけ
 
 const app = express();
 
@@ -16,8 +16,7 @@ const config = {
 app.use(middleware(config));
 app.use(bodyParser.json());
 
-const messageHandler = require('./handlers/messageHandler');
-app.post('/webhook', messageHandler);
+app.post('/webhook', messageHandler);  // そのまま使う
 
 // Render用のポート設定
 const PORT = process.env.PORT || 10000;
