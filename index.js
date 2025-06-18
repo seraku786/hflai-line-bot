@@ -2,7 +2,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { middleware } = require('@line/bot-sdk');
-require('dotenv').config();
+const messageHandler = require('./src/handlers/messageHandler');
 
 const app = express();
 
