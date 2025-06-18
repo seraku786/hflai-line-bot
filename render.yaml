@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: hflai-line-bot
+    env: node
+    buildCommand: npm install
+    startCommand: node index.js
+    plan: free
+    branch: main
+    envVars:
+      - key: CHANNEL_SECRET
+        value: あなたのLINEチャンネルシークレット
+      - key: CHANNEL_ACCESS_TOKEN
+        value: あなたのLINEチャンネルトークン
