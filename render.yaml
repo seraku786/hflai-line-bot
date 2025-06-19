@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     buildCommand: npm install
-    startCommand: node index.js
+    startCommand: node src/index.js
     envVars:
       - key: LINE_CHANNEL_ACCESS_TOKEN
         value: zMTScCFScdlDQVTSBRFkxyp/Vz3xHD27M0kpLsCSjYAHGSYcc+Tu7Rov8wsjfUPtWiRvH0wajSrcNK7EC0vM7fLmCVp2vbSaDJQDQPc7h01V5gNZvzxYje3CvNSkQ2MVSQU0IrlRV1T9Bj54CqhpoAdB04t89/1O/w1cDnyilFU=
