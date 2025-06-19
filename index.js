@@ -1,9 +1,12 @@
-// 📁 index.js
-const express = require('express');
-const { middleware } = require('@line/bot-sdk');
-const messageHandler = require('./handlers/messageHandler');
+import express from "express";
+import dotenv from "dotenv";
+import line from "@line/bot-sdk";
+import { handleMessageEvent } from "./src/handlers/messageHandler.js";
+
+dotenv.config();
 
 const app = express();
+const port = process.env.PORT || 10000;
 
 // LINE SDKの設定
 const config = {
@@ -11,11 +14,38 @@ const config = {
   channelSecret: process.env.LINE_CHANNEL_SECRET,
 };
 
-// ✅ middleware のみ使用、bodyParser は不要！
-app.post('/webhook', middleware(config), messageHandler);
+const client = new line.Client(config);
 
-// ✅ 他のルートでは body-parser を使ってOK（今は不要）
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log(`🚀 HFLAI LINE Bot is running on port ${PORT}`);
+// グローバルに使いたい場合はmessageHandler.jsへclientを渡すなど検討してください
+// ここではグローバルにセット
+export { client };
+
+// ミドルウェア設定
+app.post(
+  "/webhook",
+  line.middleware(config),
+  async (req, res) => {
+    try {
+      const events = req.body.events;
+
+      // 複数イベントをPromise.allで並列処理
+      await Promise.all(
+        events.map(async (event) => {
+          if (event.type === "message") {
+            await handleMessageEvent(event);
+          }
+          // 他のイベントタイプ（フォロー、アンフォローなど）は必要に応じて処理を追加
+        })
+      );
+
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("Webhookエラー:", error);
+      res.status(500).send("Error");
+    }
+  }
+);
+
+app.listen(port, () => {
+  console.log(`🚀 HFLAI LINE Bot is running on port ${port}`);
 });
