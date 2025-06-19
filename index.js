@@ -1,6 +1,5 @@
 // 📁 index.js
 const express = require('express');
-const bodyParser = require('body-parser');
 const { middleware } = require('@line/bot-sdk');
 const messageHandler = require('./handlers/messageHandler');
 
@@ -12,12 +11,10 @@ const config = {
   channelSecret: process.env.LINE_CHANNEL_SECRET,
 };
 
-// ✅ 正しい順番（bodyParser → middleware）
-app.use(bodyParser.json());
-app.use(middleware(config));
+// ✅ middleware のみ使用、bodyParser は不要！
+app.post('/webhook', middleware(config), messageHandler);
 
-app.post('/webhook', messageHandler);
-
+// ✅ 他のルートでは body-parser を使ってOK（今は不要）
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 HFLAI LINE Bot is running on port ${PORT}`);
