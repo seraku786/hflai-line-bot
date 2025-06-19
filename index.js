@@ -12,13 +12,12 @@ const config = {
   channelSecret: process.env.LINE_CHANNEL_SECRET,
 };
 
-// LINEのミドルウェアとエンドポイント
-app.use(middleware(config));
+// ✅ 正しい順番（bodyParser → middleware）
 app.use(bodyParser.json());
+app.use(middleware(config));
 
-app.post('/webhook', messageHandler);  // そのまま使う
+app.post('/webhook', messageHandler);
 
-// Render用のポート設定
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 HFLAI LINE Bot is running on port ${PORT}`);
