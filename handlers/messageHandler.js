@@ -39,22 +39,17 @@ module.exports = async (req, res) => {
     }
 
     // 人格未選択 → クイックリプライ表示
-    if (!session.persona && text.toLowerCase().includes('会話を始める')) {
-      return client.replyMessage(event.replyToken, {
-        type: 'text',
-        text: 'どの人格と話したいですか？',
-        quickReply: {
-          items: Object.keys(personas).map(name => ({
-            type: 'action',
-            action: {
-              type: 'message',
-              label: name,
-              text: `/人格 ${name}`
-            }
-          }))
-        }
-      });
+   quickReply: {
+  items: Object.keys(personas).map(name => ({
+    type: 'action',
+    action: {
+      type: 'message',
+      label: name.slice(0, 20), // ラベルは20文字以内で制限
+      text: `/人格 ${name}`
     }
+  }))
+}
+
 
     // 人格設定コマンド
     if (text.startsWith('/人格')) {
