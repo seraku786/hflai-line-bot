@@ -11,10 +11,10 @@ async function generateReply(userMessage, persona) {
   ];
   try {
     const result = await model.generateContent({ contents: prompt });
-    return result.response.text();
+    // 修正: response は文字列のはずなのでそのまま返す
+    return result.response;
   } catch (err) {
     console.error('Gemini API error:', err);
     return 'ごめんなさい、少し時間をおいてもう一度話しかけてくれる？';
   }
 }
-module.exports = { generateReply };
