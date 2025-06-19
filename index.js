@@ -2,7 +2,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { middleware } = require('@line/bot-sdk');
-const messageHandler = require('./src/handlers/messageHandler');  // ここだけ
+const messageHandler = require('./handlers/messageHandler');
 
 const app = express();
 
