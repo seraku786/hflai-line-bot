@@ -1,10 +1,12 @@
-// 📁 /hflai-line-bot/handlers/messageHandler.js
 const line = require('@line/bot-sdk');
 const { getSession } = require('../utils/sessionStore');
 const { generateReply } = require('../services/geminiService');
 const personas = require('../personas');
 
 module.exports = async (req, res) => {
+  // ここでWebhookのイベントをログに出す
+  console.log('Webhook events:', JSON.stringify(req.body.events, null, 2));
+
   const events = req.body.events;
   await Promise.all(events.map(async (event) => {
     if (event.type !== 'message' || event.message.type !== 'text') return;
@@ -15,6 +17,8 @@ module.exports = async (req, res) => {
     const client = new line.Client({
       channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN
     });
+
+    // 以下はあなたの元コードのまま続きます…
 
     // フィードバック受付モード
     if (session.feedbackMode) {
@@ -108,5 +112,6 @@ module.exports = async (req, res) => {
       text: '「会話を始める」と送って、話し相手を選んでください。フィードバックも歓迎です！'
     });
   }));
+
   res.status(200).end();
 };
