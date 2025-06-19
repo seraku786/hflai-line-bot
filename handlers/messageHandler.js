@@ -1,162 +1,61 @@
-// 📁 handlers/messageHandler.js
-const line = require('@line/bot-sdk');
-const { getSession } = require('../utils/sessionStore');
-const { generateReply } = require('../services/geminiService');
-const personas = require('../personas');
+// src/handlers/messageHandler.js
+import { generateReply } from "../services/openaiService.js";
+import { client } from "../lineClient.js"; // LINE SDK clientインスタンス（要用意）
 
-module.exports = async (req, res) => {
-  console.log('Webhook events:', JSON.stringify(req.body.events, null, 2));
+// 簡単なセッション管理（メモリ内、実運用はDB推奨）
+const sessions = new Map();
 
-  const events = req.body.events;
+/**
+ * LINE webhookからのメッセージイベントを処理
+ * @param {object} event - LINE webhook eventオブジェクト
+ */
+export async function handleMessageEvent(event) {
+  if (event.type !== "message" || event.message.type !== "text") {
+    return;
+  }
 
-  await Promise.all(events.map(async (event) => {
-    if (event.type !== 'message' || event.message.type !== 'text') return;
+  const userId = event.source.userId;
+  const userText = event.message.text;
 
-    const userId = event.source.userId;
-    const text = event.message.text.trim();
-    const session = getSession(userId);
+  // セッションから過去の会話履歴取得、なければ初期化
+  if (!sessions.has(userId)) {
+    sessions.set(userId, []);
+  }
+  const history = sessions.get(userId);
 
-    const client = new line.Client({
-      channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN
+  // Chat API用メッセージ配列作成（system + history + user message）
+  const messages = [
+    {
+      role: "system",
+      content:
+        "あなたは親切で優しい相談相手です。相手の話をよく聞き、共感し、優しく返答してください。",
+    },
+    ...history,
+    { role: "user", content: userText },
+  ];
+
+  try {
+    const replyText = await generateReply(messages);
+
+    // LINEに返信
+    await client.replyMessage(event.replyToken, {
+      type: "text",
+      text: replyText,
     });
 
-    // Quick Reply Pages
-    const quickReplyPage1 = {
-      type: 'text',
-      text: 'どの人格と話したいですか？（ページ1）',
-      quickReply: {
-        items: [
-          ...Object.keys(personas)
-            .slice(0, 12)
-            .map(name => ({
-              type: 'action',
-              action: {
-                type: 'message',
-                label: name.slice(0, 12),
-                text: `/人格 ${name}`
-              }
-            })),
-          {
-            type: 'action',
-            action: {
-              type: 'message',
-              label: 'もっと見る',
-              text: 'ページ2'
-            }
-          }
-        ]
-      }
-    };
+    // 会話履歴にユーザー発言とAI応答を保存
+    history.push({ role: "user", content: userText });
+    history.push({ role: "assistant", content: replyText });
 
-    const quickReplyPage2 = {
-      type: 'text',
-      text: 'どの人格と話したいですか？（ページ2）',
-      quickReply: {
-        items: [
-          ...Object.keys(personas)
-            .slice(12, 25)
-            .map(name => ({
-              type: 'action',
-              action: {
-                type: 'message',
-                label: name.slice(0, 12),
-                text: `/人格 ${name}`
-              }
-            })),
-          {
-            type: 'action',
-            action: {
-              type: 'message',
-              label: '戻る',
-              text: 'ページ1'
-            }
-          }
-        ]
-      }
-    };
-
-    // ページ切り替え応答
-    if (!session.persona && (text.includes('会話を始める') || text === 'ページ1')) {
-      return client.replyMessage(event.replyToken, quickReplyPage1);
+    // 履歴が多くなりすぎないように直近10ターンくらいに制限
+    if (history.length > 20) {
+      sessions.set(userId, history.slice(history.length - 20));
     }
-
-    if (text === 'ページ2') {
-      return client.replyMessage(event.replyToken, quickReplyPage2);
-    }
-
-    // フィードバック受付モード
-    if (session.feedbackMode) {
-      session.feedbackMode = false;
-      return client.replyMessage(event.replyToken, {
-        type: 'text',
-        text: 'ご意見ありがとうございました！開発チームに送信されました。'
-      });
-    }
-
-    if (text.includes('フィードバック') || text.includes('意見')) {
-      session.feedbackMode = true;
-      return client.replyMessage(event.replyToken, {
-        type: 'text',
-        text: 'こんな機能が欲しい、こんな人格があれば…など、ご自由にご意見ください！'
-      });
-    }
-
-    // 人格選択処理
-    if (text.startsWith('/人格')) {
-      const personaName = text.replace('/人格', '').trim();
-      if (personas[personaName]) {
-        session.persona = personaName;
-        return client.replyMessage(event.replyToken, {
-          type: 'text',
-          text: `「${personaName}」人格で会話を始めます。何でも話してください。`
-        });
-      } else {
-        return client.replyMessage(event.replyToken, {
-          type: 'text',
-          text: 'その人格は存在しません。もう一度選んでください。'
-        });
-      }
-    }
-
-    // 会話終了・気分スコア
-    if (text === '終了') {
-      session.moodCheck = true;
-      return client.replyMessage(event.replyToken, {
-        type: 'text',
-        text: '会話を終えます。今の気分を1〜5で教えてください（1=落ち込み 5=スッキリ）'
-      });
-    }
-
-    if (session.moodCheck && /^[1-5]$/.test(text)) {
-      session.moodCheck = false;
-      const score = parseInt(text);
-      session.persona = null;
-      let advice = '';
-      if (score <= 2) advice = '今日はゆっくり休んで、自分を甘やかしてあげましょう。';
-      else if (score === 3) advice = '少し気分が上向いてきましたね。深呼吸して余白を作りましょう。';
-      else advice = 'スッキリできてよかったです！この調子で行きましょう！';
-
-      return client.replyMessage(event.replyToken, {
-        type: 'text',
-        text: `気分スコア ${score}/5 ですね。\n${advice}`
-      });
-    }
-
-    // Gemini会話処理
-    if (session.persona) {
-      const aiReply = await generateReply(text, session.persona);
-      return client.replyMessage(event.replyToken, {
-        type: 'text',
-        text: aiReply
-      });
-    }
-
-    // 未定義時
-    return client.replyMessage(event.replyToken, {
-      type: 'text',
-      text: '「会話を始める」と送って、話し相手を選んでください。フィードバックも歓迎です！'
+  } catch (error) {
+    console.error("メッセージ処理エラー:", error);
+    await client.replyMessage(event.replyToken, {
+      type: "text",
+      text: "申し訳ありません。現在メッセージに応答できません。",
     });
-  }));
-
-  res.status(200).end();
-};
+  }
+}
