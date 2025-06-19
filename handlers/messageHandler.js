@@ -4,12 +4,13 @@ const { generateReply } = require('../services/geminiService');
 const personas = require('../personas');
 
 module.exports = async (req, res) => {
-  // ここでWebhookのイベントをログに出す
   console.log('Webhook events:', JSON.stringify(req.body.events, null, 2));
 
   const events = req.body.events;
+
   await Promise.all(events.map(async (event) => {
     if (event.type !== 'message' || event.message.type !== 'text') return;
+
     const userId = event.source.userId;
     const text = event.message.text.trim();
     const session = getSession(userId);
@@ -17,8 +18,6 @@ module.exports = async (req, res) => {
     const client = new line.Client({
       channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN
     });
-
-    // 以下はあなたの元コードのまま続きます…
 
     // フィードバック受付モード
     if (session.feedbackMode) {
@@ -39,17 +38,22 @@ module.exports = async (req, res) => {
     }
 
     // 人格未選択 → クイックリプライ表示
-   quickReply: {
-  items: Object.keys(personas).map(name => ({
-    type: 'action',
-    action: {
-      type: 'message',
-      label: name.slice(0, 20), // ラベルは20文字以内で制限
-      text: `/人格 ${name}`
+    if (!session.persona && text.toLowerCase().includes('会話を始める')) {
+      return client.replyMessage(event.replyToken, {
+        type: 'text',
+        text: 'どの人格と話したいですか？',
+        quickReply: {
+          items: Object.keys(personas).map(name => ({
+            type: 'action',
+            action: {
+              type: 'message',
+              label: name.slice(0, 12), // 12文字制限（LINE推奨）
+              text: `/人格 ${name}`
+            }
+          }))
+        }
+      });
     }
-  }))
-}
-
 
     // 人格設定コマンド
     if (text.startsWith('/人格')) {
@@ -86,6 +90,7 @@ module.exports = async (req, res) => {
       if (score <= 2) advice = '今日はゆっくり休んで、自分を甘やかしてあげましょう。';
       else if (score === 3) advice = '少し気分が上向いてきましたね。深呼吸して余白を作りましょう。';
       else advice = 'スッキリできてよかったです！この調子で行きましょう！';
+
       return client.replyMessage(event.replyToken, {
         type: 'text',
         text: `気分スコア ${score}/5 ですね。\n${advice}`
