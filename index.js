@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import line from "@line/bot-sdk";
-import { handleMessageEvent } from "./src/handlers/messageHandler.js";
++ import { handleMessageEvent } from "./handlers/messageHandler.js";
 
 dotenv.config();
 
